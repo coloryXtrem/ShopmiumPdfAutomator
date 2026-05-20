@@ -1,0 +1,6 @@
+{
+  "version": "1.1.0",
+  "url": "https://github.com/VOTRE_USERNAME/VOTRE_REPO/releases/download/v1.1.0/ShopmiumPdfAutomator.exe",
+  "notes": "- Correction détection TVA (Solution 6 rayon)\n- Amélioration ticket Carrefour Drive\n- Mise à jour silencieuse",
+  "required": false
+}

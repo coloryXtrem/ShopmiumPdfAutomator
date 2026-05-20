@@ -1,0 +1,729 @@
+<Window x:Class="ShopmiumPdfAutomator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Shopmium Automator" Height="760" Width="1200"
+        MinWidth="900" MinHeight="600"
+        Background="#090B0E" WindowStartupLocation="CenterScreen"
+        Icon="Resources\icon.ico">
+
+    <Window.Resources>
+
+        <!-- Bouton primaire -->
+        <Style x:Key="BtnPrimary" TargetType="Button">
+            <Setter Property="Background"  Value="#003880"/>
+            <Setter Property="Foreground"  Value="White"/>
+            <Setter Property="FontFamily"  Value="Segoe UI"/>
+            <Setter Property="FontSize"    Value="12"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0050B8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="#1A2A3A"/>
+                                <Setter Property="Foreground" Value="#3A5060"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Bouton secondaire -->
+        <Style x:Key="BtnSecondary" TargetType="Button">
+            <Setter Property="Background"  Value="#0D1520"/>
+            <Setter Property="Foreground"  Value="#80A8D0"/>
+            <Setter Property="FontFamily"  Value="Segoe UI"/>
+            <Setter Property="FontSize"    Value="11"/>
+            <Setter Property="BorderBrush" Value="#1A3050"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor"      Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#152030"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#2A4050"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Bouton succès (vert) -->
+        <Style x:Key="BtnSuccess" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Background" Value="#006030"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#008040"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="#1A2A1A"/>
+                                <Setter Property="Foreground" Value="#3A6040"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- TextBox -->
+        <Style TargetType="TextBox">
+            <Setter Property="Background"        Value="#0D1520"/>
+            <Setter Property="Foreground"        Value="#D0E8FF"/>
+            <Setter Property="BorderBrush"       Value="#1A3050"/>
+            <Setter Property="BorderThickness"   Value="1"/>
+            <Setter Property="Padding"           Value="8,5"/>
+            <Setter Property="FontFamily"        Value="Segoe UI"/>
+            <Setter Property="FontSize"          Value="12"/>
+            <Setter Property="CaretBrush"        Value="#00AAFF"/>
+            <Setter Property="SelectionBrush"    Value="#003880"/>
+        </Style>
+
+        <!-- PasswordBox -->
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background"  Value="#0D1520"/>
+            <Setter Property="Foreground"  Value="#D0E8FF"/>
+            <Setter Property="BorderBrush" Value="#1A3050"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"     Value="8,5"/>
+            <Setter Property="FontFamily"  Value="Segoe UI"/>
+            <Setter Property="FontSize"    Value="12"/>
+        </Style>
+
+        <!-- ListBoxItem -->
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="#A0C0E0"/>
+            <Setter Property="Padding"     Value="8,5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="4" Margin="0,1">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0F2030"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#003060"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox simplifié -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background"        Value="#0D1520"/>
+            <Setter Property="Foreground"        Value="#D0E8FF"/>
+            <Setter Property="BorderBrush"       Value="#1A3050"/>
+            <Setter Property="BorderThickness"   Value="1"/>
+            <Setter Property="Padding"           Value="6,4"/>
+            <Setter Property="FontSize"          Value="12"/>
+            <Setter Property="Height"            Value="30"/>
+        </Style>
+
+        <Style TargetType="Label">
+            <Setter Property="Foreground"  Value="#607080"/>
+            <Setter Property="FontSize"    Value="10"/>
+            <Setter Property="Padding"     Value="0,0,0,2"/>
+            <Setter Property="FontFamily"  Value="Segoe UI"/>
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="Foreground"  Value="#6080A0"/>
+            <Setter Property="FontSize"    Value="10"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="FontFamily"  Value="Segoe UI"/>
+            <Setter Property="Margin"      Value="0,0,0,6"/>
+        </Style>
+
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="Background"       Value="#0D1520"/>
+            <Setter Property="BorderBrush"      Value="#1A3050"/>
+            <Setter Property="BorderThickness"  Value="1"/>
+            <Setter Property="CornerRadius"     Value="8"/>
+            <Setter Property="Padding"          Value="12"/>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid">
+
+        <!-- Licence expirée overlay -->
+        <Grid x:Name="LicenseExpiredOverlay" Visibility="Collapsed"
+              Panel.ZIndex="999" Background="#CC000000">
+            <Border Background="#0D1117" CornerRadius="10"
+                    BorderBrush="#FF4444" BorderThickness="2"
+                    Padding="32,28" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MaxWidth="440">
+                <StackPanel>
+                    <TextBlock Text="🔒 Licence expirée"
+                               Foreground="#FF4444" FontSize="18" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Votre accès a expiré ou cette clé a déjà été utilisée sur un autre appareil."
+                               Foreground="#A0B0C0" TextWrapping="Wrap"
+                               HorizontalAlignment="Center" TextAlignment="Center"
+                               Margin="0,0,0,20"/>
+                    <Button Content="🔑  Entrer une nouvelle clé de licence"
+                            Background="#003880" Foreground="White"
+                            FontSize="13" FontWeight="SemiBold"
+                            BorderThickness="0" Padding="16,10"
+                            Cursor="Hand" HorizontalAlignment="Center"
+                            Click="BtnChangeLicense_Click"/>
+                    <TextBlock Text="ou contactez le support pour obtenir une nouvelle clé"
+                               Foreground="#405060" FontSize="10"
+                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="MainContent">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="54"/>
+                <!-- Header -->
+                <RowDefinition x:Name="LicenseWarningRow" Height="0"/>
+                <!-- Banner licence -->
+                <RowDefinition Height="*"/>
+                <!-- Contenu principal -->
+                <RowDefinition Height="28"/>
+                <!-- Status bar -->
+            </Grid.RowDefinitions>
+
+            <!-- ══ HEADER ══════════════════════════════════════════════════════ -->
+            <Border Grid.Row="0" Background="#0D1117" BorderBrush="#1A2A3A" BorderThickness="0,0,0,1">
+                <Grid Margin="20,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Logo + Version -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="🛒" FontSize="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <StackPanel>
+                            <TextBlock Text="Shopmium Automator"
+                                       Foreground="White" FontSize="14" FontWeight="Bold"
+                                       FontFamily="Segoe UI"/>
+                            <TextBlock Text="v3.0 — API Mode"
+                                       Foreground="#3A6090" FontSize="10" FontFamily="Consolas"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Statut connexion + timer licence -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                VerticalAlignment="Center" Margin="0,0,4,0">
+                        <!-- Statut API -->
+                        <Border Background="#0A1520" BorderBrush="#1A3050" BorderThickness="1"
+                                CornerRadius="4" Padding="10,4" Margin="0,0,12,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="ConnectDot" Width="6" Height="6"
+                                         Fill="#3A5060" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock x:Name="ConnectStatus" Text="Non connecté"
+                                           Foreground="#607080" FontSize="11"
+                                           FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <!-- Timer licence -->
+                        <Border Background="#131920" BorderBrush="#1A2A3A" BorderThickness="1"
+                                CornerRadius="4" Padding="10,4" Margin="0,0,8,0">
+                            <TextBlock x:Name="LicenseTimer" Text="—"
+                                       Foreground="#3A6090" FontFamily="Consolas" FontSize="11"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <!-- Bouton changer de clé -->
+                        <Button Content="🔑"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="#3A5070" FontSize="14"
+                                Cursor="Hand" Padding="4,0"
+                                ToolTip="Changer de clé de licence"
+                                Click="BtnChangeLicense_Click"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ══ BANNER LICENCE ══════════════════════════════════════════════ -->
+            <Border x:Name="LicenseWarningBanner" Grid.Row="1"
+                    Background="#1A0800" BorderBrush="#FF8800" BorderThickness="0,0,0,1"
+                    Visibility="Collapsed">
+                <TextBlock x:Name="LicenseWarningText" Text=""
+                           Foreground="#FF8800" FontSize="11" FontFamily="Segoe UI"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- ══ CONTENU PRINCIPAL ════════════════════════════════════════════ -->
+            <Grid Grid.Row="2" Margin="16,12,16,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="340"/>
+                    <!-- Panneau gauche : connexion + liste offres -->
+                    <ColumnDefinition Width="8"/>
+                    <!-- Séparateur -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Panneau droit : détails + génération + aperçu -->
+                </Grid.ColumnDefinitions>
+
+                <!-- ══ PANNEAU GAUCHE ════════════════════════════════════════ -->
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <!-- Connexion -->
+                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="*"/>
+                        <!-- Liste offres -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Connexion -->
+                    <Border Grid.Row="0" Style="{StaticResource CardBorder}">
+                        <StackPanel>
+                            <TextBlock Text="🔐  CONNEXION SHOPMIUM"
+                                       Style="{StaticResource SectionTitle}"/>
+
+                            <!-- Email -->
+                            <Label Content="Email"/>
+                            <TextBox x:Name="InputEmail" Height="32" Margin="0,0,0,8"/>
+
+                            <!-- Password -->
+                            <Label Content="Mot de passe"/>
+                            <PasswordBox x:Name="InputPassword" Height="32" Margin="0,0,0,10"/>
+
+                            <!-- Bouton connexion + statut -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="LoginStatusText"
+                                           Grid.Column="0"
+                                           Text="Entrez vos identifiants"
+                                           Foreground="#405060" FontSize="10"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                                <Button x:Name="BtnLogin"
+                                        Grid.Column="1"
+                                        Content="Connexion"
+                                        Style="{StaticResource BtnPrimary}"
+                                        Padding="14,7"
+                                        Click="BtnLogin_Click"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Liste offres -->
+                    <Border Grid.Row="2" Style="{StaticResource CardBorder}" Padding="10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="6"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Titre + bouton refresh -->
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="📦  OFFRES DISPONIBLES"
+                                           Style="{StaticResource SectionTitle}"
+                                           VerticalAlignment="Center" Margin="0"/>
+                                <Button x:Name="BtnLoadOffers"
+                                        Grid.Column="1"
+                                        Content="↻  Charger"
+                                        Style="{StaticResource BtnSecondary}"
+                                        Padding="10,4" IsEnabled="False"
+                                        Click="BtnLoadOffers_Click"/>
+                            </Grid>
+
+                            <!-- Filtre recherche -->
+                            <Grid Grid.Row="2">
+                                <TextBox x:Name="SearchBox"
+                                         Height="28"
+                                         FontSize="11"
+                                         TextChanged="SearchBox_TextChanged"/>
+                                <TextBlock Text="🔍  Filtrer les offres…"
+                                           Foreground="#2A4050" FontSize="11"
+                                           IsHitTestVisible="False"
+                                           VerticalAlignment="Center" Margin="8,0"
+                                           x:Name="SearchPlaceholder"/>
+                            </Grid>
+
+                            <!-- Liste -->
+                            <ListBox x:Name="OfferListBox"
+                                     Grid.Row="4"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     SelectionChanged="OfferListBox_SelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="11" TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Foreground="#00AAFF" FontSize="10"
+                                                       FontWeight="SemiBold" Margin="6,0,0,0"
+                                                       VerticalAlignment="Center">
+                                                <TextBlock.Text>
+                                                    <Binding Path="EffectiveRebate"
+                                                             StringFormat="{}{0:F2}€"/>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ══ SÉPARATEUR ════════════════════════════════════════════ -->
+                <Border Grid.Column="1" Background="#1A2A3A" Width="1"
+                        HorizontalAlignment="Center"/>
+
+                <!-- ══ PANNEAU DROIT ════════════════════════════════════════ -->
+                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="8,0,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <!-- Détails offre -->
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <!-- Options ticket -->
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <!-- Boutons génération/soumission -->
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                            <!-- Aperçu image -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Détails de l'offre sélectionnée -->
+                        <Border x:Name="OfferDetailCard" Grid.Row="0"
+                                Style="{StaticResource CardBorder}"
+                                Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Image produit -->
+                                <Border Grid.Column="0" Width="80" Height="80"
+                                        Background="#0A1020" CornerRadius="6"
+                                        Margin="0,0,14,0" VerticalAlignment="Top">
+                                    <Image x:Name="OfferImage" Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                                </Border>
+
+                                <!-- Infos offre -->
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock x:Name="OfferTitle"
+                                               Foreground="White" FontSize="14"
+                                               FontWeight="SemiBold" TextWrapping="Wrap"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="OfferRebate"
+                                               Foreground="#00AAFF" FontSize="12"
+                                               FontWeight="Bold" Margin="0,0,0,8"/>
+
+                                    <!-- Grille infos -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="📦 EAN :"
+                                                   Foreground="#3A5070" FontSize="10" Margin="0,0,8,3"/>
+                                        <TextBlock x:Name="OfferBarcode" Grid.Row="0" Grid.Column="1"
+                                                   Foreground="#80A0C0" FontSize="10"
+                                                   FontFamily="Consolas" Margin="0,0,0,3"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="🏪 Enseignes :"
+                                                   Foreground="#3A5070" FontSize="10" Margin="0,0,8,3"/>
+                                        <TextBlock x:Name="OfferRetailers" Grid.Row="1" Grid.Column="1"
+                                                   Foreground="#80A0C0" FontSize="10"
+                                                   TextWrapping="Wrap" Margin="0,0,0,3"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="🎫 Type ticket :"
+                                                   Foreground="#3A5070" FontSize="10" Margin="0,0,8,3"/>
+                                        <TextBlock x:Name="OfferTicketType" Grid.Row="2" Grid.Column="1"
+                                                   Foreground="#80A0C0" FontSize="10" Margin="0,0,0,3"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="📷 Preuves :"
+                                                   Foreground="#3A5070" FontSize="10" Margin="0,0,8,3"/>
+                                        <TextBlock x:Name="OfferProofs" Grid.Row="3" Grid.Column="1"
+                                                   Foreground="#80A0C0" FontSize="10"
+                                                   TextWrapping="Wrap" Margin="0,0,0,3"/>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="💰 TVA :"
+                                                   Foreground="#3A5070" FontSize="10" Margin="0,0,8,0"/>
+                                        <TextBlock x:Name="OfferTva" Grid.Row="4" Grid.Column="1"
+                                                   Foreground="#80A0C0" FontSize="10"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Placeholder si aucune offre sélectionnée -->
+                        <Border x:Name="OfferPlaceholder" Grid.Row="0"
+                                Style="{StaticResource CardBorder}"
+                                Visibility="Visible">
+                            <TextBlock Text="← Sélectionnez une offre dans la liste"
+                                       Foreground="#2A4050" FontSize="13"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Margin="0,20"/>
+                        </Border>
+
+                        <!-- Options de génération du ticket -->
+                        <Border x:Name="TicketOptionsCard" Grid.Row="2"
+                                Style="{StaticResource CardBorder}"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="⚙  OPTIONS DU TICKET"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Prix unitaire -->
+                                    <StackPanel Grid.Column="0">
+                                        <Label Content="Prix unitaire (€)"/>
+                                        <TextBox x:Name="InputPrice" Height="30" FontSize="12"
+                                                 TextChanged="InputTicket_Changed"/>
+                                    </StackPanel>
+
+                                    <!-- Quantité -->
+                                    <StackPanel Grid.Column="2">
+                                        <Label Content="Quantité"/>
+                                        <TextBox x:Name="InputQty" Height="30" FontSize="12"
+                                                 TextChanged="InputTicket_Changed"/>
+                                    </StackPanel>
+
+                                    <!-- Date -->
+                                    <StackPanel Grid.Column="4">
+                                        <Label Content="Date (jj/mm/aaaa)"/>
+                                        <TextBox x:Name="InputDate" Height="30" FontSize="12"/>
+                                    </StackPanel>
+
+                                    <!-- TVA -->
+                                    <StackPanel Grid.Column="6">
+                                        <Label Content="TVA"/>
+                                        <ComboBox x:Name="CbTva" Height="30" FontSize="11"
+                                                  SelectionChanged="CbTva_Changed">
+                                            <ComboBoxItem Content="5,5 %"  Tag="0.055" IsSelected="True"/>
+                                            <ComboBoxItem Content="10,0 %" Tag="0.10"/>
+                                            <ComboBoxItem Content="20,0 %" Tag="0.20"/>
+                                            <ComboBoxItem Content="2,1 %"  Tag="0.021"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Enseigne + Total -->
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="8"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <Label Content="Enseigne (auto-remplie)"/>
+                                        <TextBox x:Name="InputChain" Height="30" FontSize="12"
+                                                 ToolTip="Ex: CARREFOUR, LECLERC, INTERMARCHE…"/>
+                                    </StackPanel>
+                                    <Border Grid.Column="2" Background="#0A1520"
+                                            BorderBrush="#1A3050" BorderThickness="1"
+                                            CornerRadius="5" Padding="12,5"
+                                            VerticalAlignment="Bottom">
+                                        <StackPanel>
+                                            <TextBlock Text="TOTAL TTC"
+                                                       Foreground="#405060" FontSize="9"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock x:Name="LblTotal"
+                                                       Foreground="#00E5A0" FontSize="16"
+                                                       FontWeight="Bold" FontFamily="Consolas"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock x:Name="LblTva"
+                                                       Foreground="#3A7050" FontSize="10"
+                                                       FontFamily="Consolas"
+                                                       HorizontalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Warning TVA incertain -->
+                                <Border x:Name="TvaWarning" Visibility="Collapsed"
+                                        Background="#1A0A00" BorderBrush="#AA6600"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="8,5" Margin="0,6,0,0">
+                                    <TextBlock Text="⚠ TVA non certaine — vérifiez le taux ci-dessus"
+                                               Foreground="#AA8800" FontSize="10" TextWrapping="Wrap"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Boutons génération + soumission -->
+                        <Border x:Name="ActionCard" Grid.Row="4"
+                                Style="{StaticResource CardBorder}"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock Text="🚀  ACTIONS"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Générer -->
+                                    <Button x:Name="BtnGenerate"
+                                            Grid.Column="0"
+                                            Content="🎨  Générer le ticket"
+                                            Style="{StaticResource BtnPrimary}"
+                                            Height="42" FontSize="13"
+                                            Click="BtnGenerate_Click"/>
+
+                                    <!-- Soumettre -->
+                                    <Button x:Name="BtnSubmit"
+                                            Grid.Column="2"
+                                            Content="🚀  Soumettre à Shopmium"
+                                            Style="{StaticResource BtnSuccess}"
+                                            Height="42" FontSize="13"
+                                            IsEnabled="False"
+                                            Click="BtnSubmit_Click"/>
+                                </Grid>
+
+                                <!-- Statut opérations -->
+                                <TextBlock x:Name="ActionStatus"
+                                           Text="" Foreground="#607080"
+                                           FontSize="11" TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,8,0,0"/>
+
+                                <!-- Bouton télécharger PNG (visible après génération) -->
+                                <Border x:Name="DownloadPanel" Visibility="Collapsed"
+                                        Margin="0,6,0,0">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Button Content="↓  Télécharger PNG"
+                                                Style="{StaticResource BtnSecondary}"
+                                                Padding="12,6" Margin="0,0,8,0"
+                                                Click="BtnDownloadPng_Click"/>
+                                        <Button Content="↓  Télécharger JPG"
+                                                Style="{StaticResource BtnSecondary}"
+                                                Padding="12,6"
+                                                Click="BtnDownloadJpg_Click"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Aperçu du ticket généré -->
+                        <Border x:Name="PreviewCard" Grid.Row="6"
+                                Style="{StaticResource CardBorder}"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🖼  APERÇU DU TICKET GÉNÉRÉ"
+                                               Style="{StaticResource SectionTitle}"
+                                               VerticalAlignment="Center" Margin="0"/>
+                                    <Border Grid.Column="1" Background="#003020"
+                                            BorderBrush="#005030" BorderThickness="1"
+                                            CornerRadius="4" Padding="8,3">
+                                        <TextBlock Text="✓ Ticket prêt"
+                                                   Foreground="#00E5A0" FontSize="10"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+                                </Grid>
+                                <Image x:Name="PreviewImage"
+                                       Stretch="Uniform" MaxHeight="500"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                            </StackPanel>
+                        </Border>
+
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- ══ STATUS BAR ═══════════════════════════════════════════════════ -->
+            <Border Grid.Row="3" Background="#070A0D" BorderBrush="#1A2A3A" BorderThickness="0,1,0,0">
+                <Grid Margin="16,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Ellipse x:Name="StatusDot" Width="6" Height="6"
+                             Fill="#3A5060" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock x:Name="StatusText" Grid.Column="1"
+                               Foreground="#3A5060" FontFamily="Consolas" FontSize="10"
+                               VerticalAlignment="Center" Text="Prêt"/>
+                    <TextBlock Grid.Column="2"
+                               Foreground="#1A2A3A" FontSize="10" FontFamily="Consolas"
+                               VerticalAlignment="Center"
+                               Text="Shopmium Automator v3.0"/>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </Grid>
+</Window>

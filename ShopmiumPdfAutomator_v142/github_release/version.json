@@ -1,0 +1,6 @@
+{
+  "version": "2.1.0",
+  "url": "https://github.com/coloryXtrem/shopmium-updates/releases/download/v2.1.0/ShopmiumPdfAutomator_Setup_v2.1.0.exe",
+  "notes": "- Surveillance licence en temps reel : avertissement 15 min avant expiration\n- Chrono mm:ss en bas de l application\n- Cle expiree : message d erreur clair au lieu de faux succes\n- Mise a jour auto : telechargement propre, suppression anciens fichiers\n- NSIS : plus de fenetre CMD au lancement du setup\n- Overlay expiration rouge bloquant avec bouton Renouveler",
+  "required": false
+}

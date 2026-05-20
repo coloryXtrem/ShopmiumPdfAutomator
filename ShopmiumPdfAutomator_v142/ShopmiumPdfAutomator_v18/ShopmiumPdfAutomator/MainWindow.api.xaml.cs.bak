@@ -1,0 +1,742 @@
+using ShopmiumPdfAutomator.Models;
+using ShopmiumPdfAutomator.Services;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using System.Collections.ObjectModel;
+
+namespace ShopmiumPdfAutomator
+{
+    public partial class MainWindow : Window
+    {
+        // ── Services ──────────────────────────────────────────────────────────
+        private readonly ShopmiumApiService _api = new();
+
+        // ── État ──────────────────────────────────────────────────────────────
+        private ShopmiumOffer?  _selectedOffer;
+        private ProductData?    _analyzedData;
+        private string?         _lastPngPath;
+        private byte[]?         _lastPreviewBytes;
+
+        // Données pour la liste filtrée
+        private List<ShopmiumOffer> _allOffers = new();
+        private readonly ObservableCollection<ShopmiumOffer> _filteredOffers = new();
+
+        // ── Timer licence ─────────────────────────────────────────────────────
+        private readonly DispatcherTimer _licenseTimer = new()
+            { Interval = TimeSpan.FromSeconds(1) };
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            // Bind la liste filtrée
+            OfferListBox.ItemsSource = _filteredOffers;
+
+            // Timer licence
+            _licenseTimer.Tick += LicenseTimer_Tick;
+            _licenseTimer.Start();
+            LicenseTimer_Tick(null, null!); // rendu immédiat
+
+            // Si déjà connecté (token sauvegardé), mettre à jour l'UI
+            // et charger automatiquement les offres
+            if (_api.IsConnected)
+            {
+                SetConnectedState(_api.UserEmail);
+                _ = LoadOffersAsync();  // fire-and-forget en arrière-plan
+            }
+
+            SetStatus("idle", "Prêt");
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  TIMER LICENCE
+        // ══════════════════════════════════════════════════════════════════════
+        private void LicenseTimer_Tick(object? sender, EventArgs e)
+        {
+            try
+            {
+                // Vérifier le statut réel de la licence en premier
+                var status = LicenseService.Check();
+
+                if (status == LicenseService.LicenseStatus.NotActivated ||
+                    status == LicenseService.LicenseStatus.Invalid)
+                {
+                    _licenseTimer.Stop();
+                    ShowChangeLicenseWindow();
+                    return;
+                }
+
+                if (status == LicenseService.LicenseStatus.Expired)
+                {
+                    LicenseExpiredOverlay.Visibility = Visibility.Visible;
+                    _licenseTimer.Stop();
+                    return;
+                }
+
+                // Licence valide
+                var expiry = LicenseService.GetExpiresAt();
+
+                // Licence permanente : null = pas d'expiration, tout va bien
+                if (expiry == null)
+                {
+                    LicenseTimer.Text       = "PERM";
+                    LicenseTimer.Foreground = new SolidColorBrush(
+                        Color.FromRgb(0x3A, 0x60, 0x90));
+                    LicenseExpiredOverlay.Visibility = Visibility.Collapsed;
+                    LicenseWarningBanner.Visibility  = Visibility.Collapsed;
+                    LicenseWarningRow.Height         = new GridLength(0);
+                    return;
+                }
+
+                var remaining = expiry.Value - DateTime.Now;
+                if (remaining <= TimeSpan.Zero)
+                {
+                    LicenseExpiredOverlay.Visibility = Visibility.Visible;
+                    _licenseTimer.Stop();
+                    return;
+                }
+
+                // Affichage du timer
+                string timerText;
+                bool isWarning = remaining.TotalMinutes < 15;
+
+                var totalDays = LicenseService.GetLicenceDays() ?? 9999;
+                if (totalDays <= 3 || remaining.TotalDays < 1)
+                {
+                    // Mode chrono hh:mm:ss
+                    timerText = remaining.ToString(@"hh\:mm\:ss");
+                }
+                else if (remaining.TotalDays <= 3)
+                {
+                    timerText = $"{(int)remaining.TotalDays}j {remaining:hh\\:mm}";
+                    isWarning = true;
+                }
+                else
+                {
+                    // Jours restants
+                    timerText = $"{(int)remaining.TotalDays} jour{((int)remaining.TotalDays > 1 ? "s" : "")}";
+                    isWarning = remaining.TotalDays <= 3;
+                }
+
+                LicenseTimer.Text       = timerText;
+                LicenseTimer.Foreground = isWarning
+                    ? new SolidColorBrush(Color.FromRgb(0xFF, 0x88, 0x00))
+                    : new SolidColorBrush(Color.FromRgb(0x3A, 0x60, 0x90));
+
+                // Banner avertissement
+                if (remaining.TotalDays <= 3)
+                {
+                    var msg = remaining.TotalDays < 1
+                        ? $"⚠ Licence expire dans {(int)remaining.TotalHours}h {remaining.Minutes:D2}min"
+                        : $"⚠ Licence expire dans {(int)remaining.TotalDays} jour(s)";
+                    SetLicenseBanner(msg, remaining.TotalHours < 1);
+                }
+                else if (LicenseWarningBanner.Visibility == Visibility.Visible)
+                {
+                    LicenseWarningBanner.Visibility = Visibility.Collapsed;
+                    LicenseWarningRow.Height        = new GridLength(0);
+                }
+            }
+            catch { }
+        }
+
+        private void SetLicenseBanner(string msg, bool urgent)
+        {
+            if (LicenseWarningBanner == null) return;
+            var color = urgent
+                ? Color.FromRgb(0xFF, 0x44, 0x00)
+                : Color.FromRgb(0xFF, 0x88, 0x00);
+            var brush = new SolidColorBrush(color);
+            LicenseWarningBanner.BorderBrush   = brush;
+            LicenseWarningBanner.Background    = new SolidColorBrush(
+                Color.FromArgb(0x30, color.R, color.G, color.B));
+            LicenseWarningText.Text            = msg;
+            LicenseWarningText.Foreground      = brush;
+            LicenseWarningBanner.Visibility    = Visibility.Visible;
+            LicenseWarningRow.Height           = new GridLength(28);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  CONNEXION
+        // ══════════════════════════════════════════════════════════════════════
+        private async void BtnLogin_Click(object sender, RoutedEventArgs e)
+        {
+            var email    = InputEmail.Text.Trim();
+            var password = InputPassword.Password;
+
+            if (_api.IsConnected)
+            {
+                // Déconnexion
+                _api.Logout();
+                SetDisconnectedState();
+                _allOffers.Clear();
+                _filteredOffers.Clear();
+                SetStatus("idle", "Déconnecté");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+            {
+                SetLoginStatus("⚠ Remplissez email et mot de passe", false);
+                return;
+            }
+
+            BtnLogin.IsEnabled = false;
+            SetLoginStatus("Connexion en cours…", null);
+            SetStatus("working", "Connexion à Shopmium…");
+
+            var (ok, msg) = await _api.LoginAsync(email, password);
+
+            if (ok)
+            {
+                SetConnectedState(email);
+                SetStatus("ok", msg);
+                // Charger les offres automatiquement
+                await LoadOffersAsync();
+            }
+            else
+            {
+                SetLoginStatus($"✗ {msg}", false);
+                BtnLogin.IsEnabled = true;
+                SetStatus("err", msg);
+            }
+        }
+
+        private void SetConnectedState(string email)
+        {
+            ConnectDot.Fill              = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xA0));
+            ConnectStatus.Text           = $"✓ {email}";
+            ConnectStatus.Foreground     = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xA0));
+            BtnLogin.Content             = "Déconnecter";
+            BtnLogin.IsEnabled           = true;
+            BtnLoadOffers.IsEnabled      = true;
+            SetLoginStatus($"Connecté : {email}", true);
+        }
+
+        private void SetDisconnectedState()
+        {
+            ConnectDot.Fill          = new SolidColorBrush(Color.FromRgb(0x3A, 0x50, 0x60));
+            ConnectStatus.Text       = "Non connecté";
+            ConnectStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x60, 0x70, 0x80));
+            BtnLogin.Content         = "Connexion";
+            BtnLogin.IsEnabled       = true;
+            BtnLoadOffers.IsEnabled  = false;
+            SetLoginStatus("Entrez vos identifiants", null);
+        }
+
+        private void SetLoginStatus(string msg, bool? success)
+        {
+            LoginStatusText.Text = msg;
+            LoginStatusText.Foreground = success switch
+            {
+                true  => new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xA0)),
+                false => new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44)),
+                _     => new SolidColorBrush(Color.FromRgb(0x40, 0x50, 0x60)),
+            };
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  CHARGEMENT DES OFFRES
+        // ══════════════════════════════════════════════════════════════════════
+        private async void BtnLoadOffers_Click(object sender, RoutedEventArgs e)
+            => await LoadOffersAsync();
+
+        private async Task LoadOffersAsync()
+        {
+            if (!_api.IsConnected) return;
+
+            BtnLoadOffers.IsEnabled = false;
+            _filteredOffers.Clear();
+            SetStatus("working", "Chargement des offres…");
+
+            var progress = new Progress<string>(msg => SetStatus("working", msg));
+            var (offers, error) = await _api.GetOffersAsync(progress);
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                SetStatus("err", "Erreur chargement offres (cliquer Charger pour détails)");
+                BtnLoadOffers.IsEnabled = true;
+                System.Windows.MessageBox.Show(
+                    error,
+                    "Erreur chargement des offres",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            _allOffers = offers;
+            ApplyFilter(SearchBox.Text);
+            SetStatus("ok", $"{offers.Count} offre(s) disponible(s)");
+            BtnLoadOffers.IsEnabled = true;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  FILTRE DE RECHERCHE
+        // ══════════════════════════════════════════════════════════════════════
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            SearchPlaceholder.Visibility = string.IsNullOrEmpty(SearchBox.Text)
+                ? Visibility.Visible : Visibility.Collapsed;
+            ApplyFilter(SearchBox.Text);
+        }
+
+        private void ApplyFilter(string filter)
+        {
+            _filteredOffers.Clear();
+            var term = filter?.Trim().ToLowerInvariant() ?? "";
+            foreach (var o in _allOffers)
+                if (string.IsNullOrEmpty(term) ||
+                    o.Name.ToLowerInvariant().Contains(term) ||
+                    o.Products.Any(p => p.Name.ToLowerInvariant().Contains(term)) ||
+                    o.Products.Any(p => (p.Ean ?? "").Contains(term)))
+                    _filteredOffers.Add(o);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  SÉLECTION D'UNE OFFRE
+        // ══════════════════════════════════════════════════════════════════════
+        private async void OfferListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (OfferListBox.SelectedItem is not ShopmiumOffer offer)
+            {
+                _selectedOffer  = null;
+                _analyzedData   = null;
+                ShowOfferPlaceholder();
+                return;
+            }
+
+            _selectedOffer = offer;
+            SetStatus("working", $"Analyse de l'offre : {offer.Name}…");
+
+            // Récupérer les détails complets (avec additional_steps) si disponibles
+            var detailed = await _api.GetOfferDetailAsync(offer.Id);
+            if (detailed != null) _selectedOffer = detailed;
+
+            // Analyser l'offre
+            _analyzedData = OfferAnalyzer.Analyze(_selectedOffer);
+
+            // Afficher les détails
+            ShowOfferDetails(_selectedOffer, _analyzedData);
+
+            // Remplir les options de ticket avec les valeurs détectées
+            PopulateTicketOptions(_analyzedData);
+
+            // Charger l'image produit en arrière-plan
+            _ = LoadOfferImageAsync(_selectedOffer);
+
+            // Lancer la détection TVA async si incertaine
+            if (_analyzedData.TvaNeedsConfirmation)
+            {
+                SetStatus("working", "Détection TVA en cours…");
+                await OfferAnalyzer.RefreshTvaAsync(_analyzedData);
+                UpdateTvaDisplay(_analyzedData);
+            }
+
+            SetStatus("ok", $"Offre prête : {_selectedOffer.Name}");
+        }
+
+        private void ShowOfferDetails(ShopmiumOffer offer, ProductData data)
+        {
+            OfferPlaceholder.Visibility  = Visibility.Collapsed;
+            OfferDetailCard.Visibility   = Visibility.Visible;
+            TicketOptionsCard.Visibility = Visibility.Visible;
+            ActionCard.Visibility        = Visibility.Visible;
+
+            // En-tête offre
+            OfferTitle.Text  = offer.Name;
+            OfferRebate.Text = offer.EffectiveRebate > 0
+                ? $"💰 {offer.EffectiveRebate:F2}€ remboursés"
+                : "Offre de remboursement";
+
+            // Barcode
+            OfferBarcode.Text = string.IsNullOrEmpty(data.BarcodeEan)
+                ? "—" : data.BarcodeEan;
+
+            // Enseignes
+            var retailers = offer.Retailers?.Select(r => r.Name).Where(n => !string.IsNullOrEmpty(n)).ToList();
+            OfferRetailers.Text = retailers?.Any() == true
+                ? string.Join(", ", retailers) : "Toutes enseignes";
+
+            // Type de ticket
+            OfferTicketType.Text = data.TicketType switch
+            {
+                TicketType.Leclerc       => "🟢 Leclerc",
+                TicketType.CarrefourDrive => "🔵 Carrefour Drive",
+                _                         => "⚪ Standard",
+            };
+
+            // Preuves requises
+            OfferProofs.Text = data.ProofRequirements.Any()
+                ? string.Join(" + ", data.ProofRequirements.Select(p => p.Label))
+                : "Ticket de caisse";
+
+            // TVA
+            UpdateTvaDisplay(data);
+        }
+
+        private void UpdateTvaDisplay(ProductData data)
+        {
+            OfferTva.Text = TvaCalculator.Format(data.TvaRate)
+                + (data.TvaNeedsConfirmation ? " (?)" : " ✓");
+            OfferTva.Foreground = data.TvaNeedsConfirmation
+                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xAA, 0x00))
+                : new SolidColorBrush(Color.FromRgb(0x80, 0xA0, 0xC0));
+
+            // Sync la ComboBox TVA
+            SelectTvaComboBox(data.TvaRate);
+            TvaWarning.Visibility = data.TvaNeedsConfirmation
+                ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void ShowOfferPlaceholder()
+        {
+            OfferDetailCard.Visibility   = Visibility.Collapsed;
+            TicketOptionsCard.Visibility = Visibility.Collapsed;
+            ActionCard.Visibility        = Visibility.Collapsed;
+            PreviewCard.Visibility       = Visibility.Collapsed;
+            OfferPlaceholder.Visibility  = Visibility.Visible;
+        }
+
+        private void PopulateTicketOptions(ProductData data)
+        {
+            InputPrice.Text = data.MaxPrice.ToString("F2",
+                System.Globalization.CultureInfo.InvariantCulture);
+            InputQty.Text   = data.MaxArticles.ToString();
+            InputDate.Text  = data.StartDate;
+            InputChain.Text = DetectChainFromOffer(_selectedOffer);
+            SelectTvaComboBox(data.TvaRate);
+            UpdateTotal();
+        }
+
+        private static string DetectChainFromOffer(ShopmiumOffer? offer)
+        {
+            if (offer?.Retailers == null || !offer.Retailers.Any()) return "";
+            if (offer.Retailers.Count == 1)
+            {
+                var name = offer.Retailers[0].Name?.ToUpper() ?? "";
+                // Normaliser le nom de l'enseigne
+                if (name.Contains("LECLERC"))     return "LECLERC";
+                if (name.Contains("CARREFOUR"))   return "CARREFOUR";
+                if (name.Contains("INTERMARCHE")) return "INTERMARCHE";
+                if (name.Contains("AUCHAN"))      return "AUCHAN";
+                if (name.Contains("MONOPRIX"))    return "MONOPRIX";
+                if (name.Contains("CASINO"))      return "CASINO";
+                if (name.Contains("SUPER U") ||
+                    name.Contains("HYPER U"))     return "SYSTEME U";
+                return name;
+            }
+            return ""; // Plusieurs enseignes → laisser vide
+        }
+
+        private async Task LoadOfferImageAsync(ShopmiumOffer offer)
+        {
+            // EffectiveImageUrl = product_image_url (CloudFront)
+            var url = offer.EffectiveImageUrl
+                   ?? offer.Products.FirstOrDefault(p => !string.IsNullOrEmpty(p.ImageUrl))?.ImageUrl
+                   ?? offer.PictureUrl;
+            if (string.IsNullOrEmpty(url)) return;
+            try
+            {
+                using var http  = new System.Net.Http.HttpClient();
+                var bytes       = await http.GetByteArrayAsync(url);
+                // Sauvegarder pour pouvoir l'utiliser dans le PSD
+                if (_analyzedData != null) _analyzedData.ProductImageData = bytes;
+
+                var bmp         = new BitmapImage();
+                bmp.BeginInit();
+                bmp.StreamSource = new MemoryStream(bytes);
+                bmp.CacheOption  = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                Dispatcher.Invoke(() => OfferImage.Source = bmp);
+            }
+            catch { }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  OPTIONS TICKET
+        // ══════════════════════════════════════════════════════════════════════
+        private void InputTicket_Changed(object sender, TextChangedEventArgs e) => UpdateTotal();
+        private void CbTva_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            if (_analyzedData != null && CbTva.SelectedItem is ComboBoxItem item)
+            {
+                _analyzedData.TvaRate = double.Parse(item.Tag?.ToString() ?? "0.055",
+                    System.Globalization.CultureInfo.InvariantCulture);
+            }
+            UpdateTotal();
+        }
+
+        private void UpdateTotal()
+        {
+            if (!double.TryParse(InputPrice.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var price)) return;
+            if (!int.TryParse(InputQty.Text, out var qty)) return;
+            if (CbTva.SelectedItem is not ComboBoxItem tvaItem) return;
+
+            var tvaRate = double.Parse(tvaItem.Tag?.ToString() ?? "0.055",
+                System.Globalization.CultureInfo.InvariantCulture);
+            var total   = Math.Round(qty * price, 2);
+            var tva     = Math.Round(total * tvaRate / (1 + tvaRate), 2);
+
+            LblTotal.Text = $"{total:F2} €";
+            LblTva.Text   = $"dont TVA {tva:F2} €";
+        }
+
+        private void SelectTvaComboBox(double rate)
+        {
+            foreach (ComboBoxItem item in CbTva.Items)
+                if (Math.Abs(double.Parse(item.Tag?.ToString() ?? "0", System.Globalization.CultureInfo.InvariantCulture) - rate) < 0.001)
+                {
+                    CbTva.SelectedItem = item;
+                    return;
+                }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  GÉNÉRATION DU TICKET
+        // ══════════════════════════════════════════════════════════════════════
+        private async void BtnGenerate_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedOffer == null || _analyzedData == null) return;
+
+            // Mettre à jour les données depuis l'UI
+            SyncDataFromUI();
+
+            BtnGenerate.IsEnabled = false;
+            BtnSubmit.IsEnabled   = false;
+            DownloadPanel.Visibility = Visibility.Collapsed;
+            ActionStatus.Text        = "";
+            SetStatus("working", "Lancement de Photoshop…");
+
+            try
+            {
+                var outDir   = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                    "Shopmium_Tickets");
+                Directory.CreateDirectory(outDir);
+
+                var progress = new Progress<string>(msg =>
+                {
+                    SetStatus("working", msg);
+                    ActionStatus.Text = msg;
+                    ActionStatus.Foreground = new SolidColorBrush(
+                        Color.FromRgb(0x00, 0xAA, 0xFF));
+                });
+
+                var result = await PhotoshopService.RenderAsync(_analyzedData, outDir, progress);
+
+                _lastPngPath      = result.PngPath;
+                _lastPreviewBytes = result.PreviewPngBytes;
+
+                if (result.PreviewPngBytes.Length > 0)
+                    ShowPreview(result.PreviewPngBytes);
+
+                ActionStatus.Text       = $"✅ Ticket généré : {Path.GetFileName(result.PngPath)}";
+                ActionStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xA0));
+
+                DownloadPanel.Visibility = Visibility.Visible;
+                BtnSubmit.IsEnabled      = _api.IsConnected;
+                SetStatus("ok", $"Ticket PNG généré : {Path.GetFileName(result.PngPath)}");
+            }
+            catch (Exception ex)
+            {
+                ActionStatus.Text       = $"✗ Erreur : {ex.Message}";
+                ActionStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
+                SetStatus("err", ex.Message);
+            }
+            finally
+            {
+                BtnGenerate.IsEnabled = true;
+            }
+        }
+
+        private void SyncDataFromUI()
+        {
+            if (_analyzedData == null) return;
+
+            if (double.TryParse(InputPrice.Text.Replace(',', '.'),
+                System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var price))
+                _analyzedData.MaxPrice = price;
+
+            if (int.TryParse(InputQty.Text, out var qty))
+                _analyzedData.MaxArticles = qty;
+
+            _analyzedData.StartDate = InputDate.Text;
+
+            if (CbTva.SelectedItem is ComboBoxItem tvaItem)
+                _analyzedData.TvaRate = double.Parse(
+                    tvaItem.Tag?.ToString() ?? "0.055",
+                    System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private void ShowPreview(byte[] pngBytes)
+        {
+            try
+            {
+                var bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.StreamSource  = new MemoryStream(pngBytes);
+                bmp.CacheOption   = BitmapCacheOption.OnLoad;
+                bmp.EndInit();
+                bmp.Freeze();
+                PreviewImage.Source    = bmp;
+                PreviewCard.Visibility = Visibility.Visible;
+            }
+            catch { }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  SOUMISSION À SHOPMIUM
+        // ══════════════════════════════════════════════════════════════════════
+        private async void BtnSubmit_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedOffer == null || string.IsNullOrEmpty(_lastPngPath)) return;
+            if (!File.Exists(_lastPngPath))
+            {
+                ActionStatus.Text       = "✗ Fichier PNG introuvable — regénérez le ticket";
+                ActionStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
+                return;
+            }
+
+            BtnSubmit.IsEnabled   = false;
+            BtnGenerate.IsEnabled = false;
+            SetStatus("working", "Soumission en cours…");
+
+            var progress = new Progress<string>(msg =>
+            {
+                ActionStatus.Text       = msg;
+                ActionStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xAA, 0xFF));
+                SetStatus("working", msg);
+            });
+
+            try
+            {
+                // Upload de l'image
+                var (s3Url, uploadErr) = await _api.UploadImageAsync(_lastPngPath, progress);
+                if (s3Url == null)
+                {
+                    ShowActionError($"Erreur upload : {uploadErr}");
+                    return;
+                }
+
+                // Soumission
+                var chain = string.IsNullOrWhiteSpace(InputChain.Text)
+                    ? null : InputChain.Text.Trim();
+
+                var (ok, msg, subId) = await _api.SubmitTicketAsync(
+                    _selectedOffer, s3Url, chain, progress);
+
+                if (ok)
+                {
+                    ActionStatus.Text       = $"✅ {msg}";
+                    ActionStatus.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xE5, 0xA0));
+                    SetStatus("ok", msg);
+                    BtnSubmit.IsEnabled = false; // Une seule soumission par ticket
+                }
+                else
+                {
+                    ShowActionError(msg);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowActionError(ex.Message);
+            }
+            finally
+            {
+                BtnGenerate.IsEnabled = true;
+            }
+        }
+
+        private void ShowActionError(string msg)
+        {
+            ActionStatus.Text       = $"✗ {msg}";
+            ActionStatus.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x44, 0x44));
+            SetStatus("err", msg);
+            BtnSubmit.IsEnabled   = _api.IsConnected && !string.IsNullOrEmpty(_lastPngPath);
+            BtnGenerate.IsEnabled = true;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  TÉLÉCHARGEMENTS
+        // ══════════════════════════════════════════════════════════════════════
+        private void BtnDownloadPng_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(_lastPngPath) || !File.Exists(_lastPngPath)) return;
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title      = "Enregistrer le ticket PNG",
+                FileName   = Path.GetFileName(_lastPngPath),
+                DefaultExt = ".png",
+                Filter     = "Images PNG|*.png",
+            };
+            if (dlg.ShowDialog() == true)
+                File.Copy(_lastPngPath, dlg.FileName, true);
+        }
+
+        private void BtnDownloadJpg_Click(object sender, RoutedEventArgs e)
+        {
+            if (_lastPreviewBytes == null || _lastPreviewBytes.Length == 0) return;
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Title      = "Enregistrer le ticket JPG",
+                FileName   = $"ticket_{DateTime.Now:yyyyMMdd_HHmmss}.jpg",
+                DefaultExt = ".jpg",
+                Filter     = "Images JPEG|*.jpg",
+            };
+            if (dlg.ShowDialog() == true)
+                File.WriteAllBytes(dlg.FileName, _lastPreviewBytes);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  STATUS BAR
+        // ══════════════════════════════════════════════════════════════════════
+        private void SetStatus(string type, string message)
+        {
+            var (color, dotColor) = type switch
+            {
+                "ok"      => (Color.FromRgb(0x00, 0xE5, 0xA0), Color.FromRgb(0x00, 0xE5, 0xA0)),
+                "working" => (Color.FromRgb(0x00, 0xAA, 0xFF), Color.FromRgb(0x00, 0xAA, 0xFF)),
+                "err"     => (Color.FromRgb(0xFF, 0x44, 0x44), Color.FromRgb(0xFF, 0x44, 0x44)),
+                _         => (Color.FromRgb(0x3A, 0x50, 0x60), Color.FromRgb(0x3A, 0x50, 0x60)),
+            };
+            StatusText.Text       = message;
+            StatusText.Foreground = new SolidColorBrush(color);
+            StatusDot.Fill        = new SolidColorBrush(dotColor);
+        }
+// ══════════════════════════════════════════════════════════════════════
+        //  CHANGER / RENOUVELER LA LICENCE
+        // ══════════════════════════════════════════════════════════════════════
+
+        /// <summary>Ouvre la fenêtre d'activation pour changer ou renouveler la licence.</summary>
+        private void ShowChangeLicenseWindow(bool expired = false)
+        {
+            var win = new ActivationWindow(expired);
+            var result = win.ShowDialog();
+            if (result == true)
+            {
+                // Licence activée → masquer l'overlay, redémarrer le timer
+                LicenseExpiredOverlay.Visibility = Visibility.Collapsed;
+                _licenseTimer.Start();
+                LicenseTimer_Tick(null, null!);
+                SetStatus("ok", "Licence activée ✓");
+            }
+            else if (!LicenseService.Check().Equals(LicenseService.LicenseStatus.Valid))
+            {
+                // Annulé et toujours pas de licence valide → fermer l'app
+                System.Windows.Application.Current.Shutdown();
+            }
+        }
+
+        private void BtnChangeLicense_Click(object sender, RoutedEventArgs e)
+            => ShowChangeLicenseWindow(
+                LicenseService.Check() == LicenseService.LicenseStatus.Expired);
+
+    }
+}

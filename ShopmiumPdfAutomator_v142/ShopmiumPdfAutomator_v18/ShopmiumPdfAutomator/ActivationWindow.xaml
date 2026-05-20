@@ -1,0 +1,46 @@
+<Window x:Class="ShopmiumPdfAutomator.ActivationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Activation — Shopmium PDF Automator"
+        Width="480" Height="280"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="#0D1117">
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="🔑 Activation requise"
+                   Foreground="#00D4FF" FontSize="20" FontWeight="Bold"
+                   Margin="0,0,0,8"/>
+
+        <TextBlock Grid.Row="1"
+                   Text="Entrez votre clé de licence (format : SHPM-XXXX-XXXX-XXXX-XXXX)"
+                   Foreground="#8899AA" FontSize="12" Margin="0,0,0,16"
+                   TextWrapping="Wrap"/>
+
+        <TextBox x:Name="KeyBox" Grid.Row="2"
+                 Background="#1A2230" Foreground="White"
+                 BorderBrush="#2A3A50" BorderThickness="1"
+                 Padding="10,8" FontSize="14" FontFamily="Consolas"
+                 CharacterCasing="Upper"
+                 Margin="0,0,0,12"/>
+
+        <Button x:Name="ActivateBtn" Grid.Row="3"
+                Content="Activer" Click="ActivateBtn_Click"
+                Background="#00D4FF" Foreground="#0D1117"
+                FontWeight="Bold" FontSize="14"
+                Padding="0,10" BorderThickness="0"
+                Cursor="Hand"/>
+
+        <TextBlock x:Name="StatusText" Grid.Row="4"
+                   Foreground="#FF4455" FontSize="12"
+                   Margin="0,12,0,0" TextWrapping="Wrap"
+                   VerticalAlignment="Top"/>
+    </Grid>
+</Window>

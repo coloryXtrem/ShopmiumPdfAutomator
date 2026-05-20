@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>ShopmiumPdfAutomator</AssemblyName>
+    <RootNamespace>ShopmiumPdfAutomator</RootNamespace>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <Version>3.0.0</Version>
+    <AssemblyVersion>3.0.0.0</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
+    <Product>Shopmium PDF Automator</Product>
+    <Company>ShopmiumHelper</Company>
+    <Copyright>© 2026 ShopmiumHelper</Copyright>
+    <Authors>ShopmiumHelper</Authors>
+    <Description>Generateur automatique de tickets Carrefour depuis Shopmium</Description>
+    <NuGetAuditMode>direct</NuGetAuditMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      HtmlAgilityPack : seul package NuGet nécessaire
+      Pas de Magick.NET ni SkiaSharp — le rendu est entièrement délégué à Photoshop
+    -->
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <!--
+      DPAPI Windows pour chiffrement local des mots de passe Shopmium
+    -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <!--
+      Selenium.WebDriver : navigation headless Chrome pour les sites JS (Auchan, etc.)
+      Chrome doit être installé sur le PC — ChromeDriver est géré automatiquement
+    -->
+    <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\icon.ico" />
+    <Content Include="Resources\template.psd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Fichiers PSD templates tickets -->
+    <Content Include="Resources\template.psd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\leclerc.psd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\carrefour-drive.psd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
